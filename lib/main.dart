@@ -1,5 +1,7 @@
 import 'package:erammediatask/models/todo_model.dart';
 import 'package:erammediatask/providers/todos_bloc.dart';
+import 'package:erammediatask/services/todo_service.dart';
+import 'package:erammediatask/utils/snacbar.dart';
 import 'package:erammediatask/widgets/todo_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -13,17 +15,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return  MultiProvider(providers:  [
-      ChangeNotifierProvider<TodoProvider>(
-        create: (context) => TodoProvider(),
-      ),
-
-
-    ],
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<TodoProvider>(
+          create: (context) => TodoProvider(),
+        ),
+      ],
       child: MaterialApp(
-        title: 'Flutter Demo',
+        title: 'Eram Media Task',
         theme: ThemeData(
-
           primarySwatch: Colors.blue,
         ),
         home: const MyHomePage(title: 'Eram Media Task'),
@@ -35,7 +35,6 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
 
-
   final String title;
 
   @override
@@ -46,9 +45,17 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     // TODO: implement initState
-    context.read<TodoProvider>().getTodo();
+    ApiService().checkInternet().then((hasInternet) {
+      if (hasInternet == false) {
+        openSnacbar(context,
+            'No Internet\nPlease Check Your Internet Connection And Try Again!');
+      } else {
+        context.read<TodoProvider>().getTodo();
+      }
+    });
     super.initState();
   }
+
   void _showTextInputDialog(BuildContext context) {
     final TextEditingController textController = TextEditingController();
 
@@ -70,9 +77,18 @@ class _MyHomePageState extends State<MyHomePage> {
             TextButton(
               child: Text('Add'),
               onPressed: () async {
-                print(textController.text);
-               await context.read<TodoProvider>().addTodo(textController.text, context);
-                Navigator.of(context).pop();
+                ApiService().checkInternet().then((hasInternet) async {
+                  if (hasInternet == false) {
+                    openSnacbar(context,
+                        'No Internet\nPlease Check Your Internet Connection And Try Again!');
+                    Navigator.of(context).pop();
+                  } else {
+                    await context
+                        .read<TodoProvider>()
+                        .addTodo(textController.text, context);
+                    Navigator.of(context).pop();
+                  }
+                });
               },
             ),
           ],
@@ -83,43 +99,48 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-
-
     return Scaffold(
       appBar: AppBar(
-
         title: Text(widget.title),
-        actions: [IconButton(onPressed: (){    context.read<TodoProvider>().getTodo();
-        }, icon: const Icon(Icons.refresh))],
-      ),
-      body:context.watch<TodoProvider>().isLoading?Center(child: CircularProgressIndicator(),):Column(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: <Widget>[
-       Expanded(
-         child: ListView.separated(
-
-      itemCount:
-            context.watch<TodoProvider>().todoList.length,
-      shrinkWrap: true, scrollDirection: Axis.vertical,
-      itemBuilder: (context, index) {
-          TodoModel todo = context.watch<TodoProvider>().todoList[index];
-
-
-          return TodoCard(model: todo,);
-      },
-      separatorBuilder: (BuildContext context, int index) {
-          return SizedBox(height: 5);
-      },
-         ),
-       ),
-
+        actions: [
+          IconButton(
+              onPressed: () {
+                context.read<TodoProvider>().getTodo();
+              },
+              icon: const Icon(Icons.refresh))
         ],
       ),
+      body: context.watch<TodoProvider>().isLoading
+          ? Center(
+              child: CircularProgressIndicator(),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: context.watch<TodoProvider>().todoList.length,
+                    shrinkWrap: true,
+                    scrollDirection: Axis.vertical,
+                    itemBuilder: (context, index) {
+                      TodoModel todo =
+                          context.watch<TodoProvider>().todoList[index];
+
+                      return TodoCard(
+                        model: todo,
+                      );
+                    },
+                    separatorBuilder: (BuildContext context, int index) {
+                      return SizedBox(height: 5);
+                    },
+                  ),
+                ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _showTextInputDialog(context);
-
         },
         child: const Icon(Icons.add),
       ),

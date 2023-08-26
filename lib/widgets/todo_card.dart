@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:provider/provider.dart';
 
+import '../services/todo_service.dart';
+import '../utils/snacbar.dart';
+
 class TodoCard extends StatelessWidget {
   TodoCard({Key? key, required this.model}) : super(key: key);
   final TodoModel model;
@@ -98,22 +101,40 @@ class TodoCard extends StatelessWidget {
                               TextButton(
                                 child: Text('Update'),
                                 onPressed: () async {
-                                  await context.read<TodoProvider>().editTodo(
-                                      textController.text,
-                                      context,
-                                      model!.id!,
-                                      selected);
-
-                                  Navigator.of(context).pop();
+                                  ApiService()
+                                      .checkInternet()
+                                      .then((hasInternet) async {
+                                    if (hasInternet == false) {
+                                      openSnacbar(context,
+                                          'No Internet\nPlease Check Your Internet Connection And Try Again!');
+                                      Navigator.of(context).pop();
+                                    } else {
+                                      await context
+                                          .read<TodoProvider>()
+                                          .editTodo(textController.text,
+                                              context, model!.id!, selected);
+                                      Navigator.of(context).pop();
+                                    }
+                                  });
                                 },
                               ),
                               TextButton(
                                 child: Text('Delete'),
                                 onPressed: () async {
-                                  await context
-                                      .read<TodoProvider>()
-                                      .deleteTodo(model.id!, context);
-                                  Navigator.of(context).pop();
+                                  ApiService()
+                                      .checkInternet()
+                                      .then((hasInternet) async {
+                                    if (hasInternet == false) {
+                                      openSnacbar(context,
+                                          'No Internet\nPlease Check Your Internet Connection And Try Again!');
+                                      Navigator.of(context).pop();
+                                    } else {
+                                      await context
+                                          .read<TodoProvider>()
+                                          .deleteTodo(model.id!, context);
+                                      Navigator.of(context).pop();
+                                    }
+                                  });
                                 },
                               ),
                             ],
